@@ -48,9 +48,11 @@ if [ ! -f /etc/app_configured ]; then
 
     cp /sources/core.conf /torrents/config/deluge
     cp /sources/web.conf /torrents/config/deluge
+    cp /sources/hostlist.conf.1.2 /torrents/config/deluge
     sed -i 's#LISTENING_PORT#'${LISTENING_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
+    sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/hostlist.conf.1.2
 
     /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
 
