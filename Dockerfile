@@ -53,13 +53,12 @@ RUN \
 # add local files
 
 RUN setcap cap_net_bind_service=+ep /usr/bin/python2.7
-RUN mkdir -p /torrents/config/deluge
 ADD sources /sources
 ADD sources/supervisord.conf /etc/supervisord.conf
 ADD scripts/deluge-pass.py /scripts/deluge-pass.py
 ADD scripts/start.sh /scripts/start.sh
 RUN chmod -R +x /scripts
 # ports
-EXPOSE 80 58846 58946 58946/udp
+EXPOSE 80
 
 CMD [ "/scripts/start.sh" ]
