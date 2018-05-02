@@ -49,7 +49,8 @@ if [ ! -f /etc/app_configured ]; then
     cp /sources/core.conf /torrents/config/deluge
     cp /sources/web.conf /torrents/config/deluge
     cp /sources/hostlist.conf.1.2 /torrents/config/deluge
-    sed -i 's#LISTENING_PORT#'${LISTENING_PORT}'#g' /torrents/config/deluge/core.conf
+    sed -i 's#FIRST_PORT#'${FIRST_PORT}'#g' /torrents/config/deluge/core.conf
+    sed -i 's#LAST_PORT#'${LAST_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/hostlist.conf.1.2
@@ -57,9 +58,9 @@ if [ ! -f /etc/app_configured ]; then
     /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
 
     cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
-
-    chown -R deluge:deluge /torrents
 fi
+
+ls -d /torrents/* | grep -v home | xargs -d "\n" chown -R deluge:deluge
 
 ###########################[ MARK INSTALLED ]###############################
 

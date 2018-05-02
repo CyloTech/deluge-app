@@ -24,10 +24,17 @@ RUN \
 	p7zip \
 	unrar \
 	libcap \
-	unzip && \
- apk add --no-cache \
+	unzip
+RUN apk add --no-cache \
+    --repository http://nl.alpinelinux.org/alpine/edge/main \
+    boost-python \
+    boost-system \
+    libressl2.7-libssl \
+    libressl2.7-libcrypto
+RUN apk add --no-cache \
 	--repository http://nl.alpinelinux.org/alpine/edge/testing \
-	deluge && \
+	deluge \
+    libtorrent-rasterbar && \
  echo "**** install pip packages ****" && \
  pip install --no-cache-dir -U \
 	incremental \
