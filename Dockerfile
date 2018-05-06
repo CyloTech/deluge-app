@@ -24,7 +24,8 @@ RUN \
 	p7zip \
 	unrar \
 	libcap \
-	unzip
+	unzip \
+	findutils
 RUN apk add --no-cache \
     --repository http://nl.alpinelinux.org/alpine/edge/main \
     boost-python \
