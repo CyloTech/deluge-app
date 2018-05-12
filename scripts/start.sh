@@ -46,6 +46,12 @@ if [ ! -f /etc/app_configured ]; then
     mkdir -p /torrents/config/torrents
     mkdir -p /torrents/watch
 
+    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
+
+    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
+fi
+
+if [ ! -f /torrents/config/deluge/core.conf ]; then
     cp /sources/core.conf /torrents/config/deluge
     cp /sources/web.conf /torrents/config/deluge
     cp /sources/hostlist.conf.1.2 /torrents/config/deluge
@@ -54,10 +60,11 @@ if [ ! -f /etc/app_configured ]; then
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/hostlist.conf.1.2
-
-    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
-
-    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
+else
+    sed -i 's#"daemon_port": [0-9]*,#"daemon_port": '${DAEMON_PORT}',#g' /torrents/config/deluge/core.conf
+    sed -i -z 's#"listen_ports": \[\n\s*[0-9]*,\s*[0-9]*\n\s*\],#"listen_ports": \[\n    '${FIRST_PORT}',\n    '${LAST_PORT}'\n  ],#g' /torrents/config/deluge/core.conf
+    sed -i 's#127.0.0.1:[0-9]*#127.0.0.1:'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
+    sed -i -z 's#"127.0.0.1",\n\s*[0-9]*,#"127.0.0.1",\n      '${DAEMON_PORT}',#g' /torrents/config/deluge/hostlist.conf.1.2
 fi
 
 ls -d /torrents/* | grep -v home | xargs -d "\n" chown -R deluge:deluge
