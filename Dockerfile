@@ -1,66 +1,22 @@
-FROM alpine:3.7
+FROM ubuntu
+USER root
 
-ENV PYTHON_EGG_CACHE="/torrents/config/deluge/plugins/.python-eggs"
+RUN adduser --system --disabled-password --home /home/deluge --shell /sbin/nologin --group --uid 1000 deluge
 
-RUN \
-  addgroup -S deluge -g 1000 && \
-  adduser -D -S -h /home/deluge -s /sbin/nologin -G deluge deluge -u 1000 && \
-  echo "**** install build packages ****" && \
- apk add --no-cache --virtual=build-dependencies \
-	g++ \
-	gcc \
-	libffi-dev \
-	openssl-dev \
-	py2-pip \
-	python2-dev && \
- echo "**** install runtime packages ****" && \
- apk add --no-cache \
+RUN apt update && \
+    apt install -y \
+    deluged \
+    deluge-web \
+    deluge-console \
+    p7zip \
+    unrar \
+    unzip \
     supervisor \
-    bash \
-	ca-certificates \
-	curl \
-	libressl2.6-libssl \
-	openssl \
-	p7zip \
-	unrar \
-	libcap \
-	unzip \
-	findutils \
-	sed
-RUN apk add --no-cache \
-    --repository http://nl.alpinelinux.org/alpine/edge/main \
-    boost-python \
-    boost-system \
-    libressl2.7-libssl \
-    libressl2.7-libcrypto
-RUN apk add --no-cache \
-	--repository http://nl.alpinelinux.org/alpine/edge/testing \
-	deluge \
-    libtorrent-rasterbar && \
- echo "**** install pip packages ****" && \
- pip install --no-cache-dir -U \
-	incremental \
-	pip && \
- pip install --no-cache-dir -U \
-	crypto \
-	mako \
-	markupsafe \
-	pyopenssl \
-	service_identity \
-	six \
-	twisted \
-	zope.interface && \
- echo "**** cleanup ****" && \
- apk del --purge \
-	build-dependencies && \
- rm -rf /root/.cache && \
- wget -q http://geolite.maxmind.com/download/geoip/database/GeoLiteCountry/GeoIP.dat.gz && \
- gunzip GeoIP.dat.gz && \
- mkdir -p /usr/share/GeoIP && \
- mv GeoIP.dat /usr/share/GeoIP/GeoIP.dat
+    libcap2-bin \
+    libgeoip-dev \
+    curl
 
 # add local files
-
 RUN setcap cap_net_bind_service=+ep /usr/bin/python2.7
 ADD sources /sources
 ADD sources/supervisord.conf /etc/supervisord.conf
