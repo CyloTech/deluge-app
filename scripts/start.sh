@@ -7,7 +7,7 @@ if [ ! -f /etc/app_configured ]; then
     mkdir -p /etc/supervisor/conf.d
 cat << EOF >> /etc/supervisor/conf.d/deluged.conf
 [program:deluged]
-command=/bin/su -s /bin/bash -c "TERM=xterm /usr/bin/deluged -c /torrents/config/deluge/ -d --loglevel=info -l /torrents/config/log/deluged.log" deluge
+command=/bin/su -s /bin/bash -c "TERM=xterm && ulimit -Sn 65535 && /usr/bin/deluged -c /torrents/config/deluge/ -d --loglevel=info -l /torrents/config/log/deluged.log" deluge
 autostart=true
 autorestart=true
 priority=1
@@ -45,10 +45,22 @@ if [ ! -f /etc/app_configured ]; then
     mkdir -p /torrents/config/log
     mkdir -p /torrents/config/torrents
     mkdir -p /torrents/watch
+fi
 
-    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
+if [ ! -f /torrents/config/deluge/plugins/YaRSS2-1.4.3-py2.7.egg ]; then
+    cp /sources/YaRSS2-1.4.3-py2.7.egg /torrents/config/deluge/plugins/YaRSS2-1.4.3-py2.7.egg
+fi
 
-    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
+if [ ! -f /torrents/config/deluge/plugins/ltConfig-0.3.1-py2.7.egg ]; then
+    cp /sources/ltConfig-0.3.1-py2.7.egg /torrents/config/deluge/plugins/ltConfig-0.3.1-py2.7.egg
+fi
+
+if [ ! -f /torrents/config/deluge/ltconfig.conf ]; then
+    cp /sources/ltconfig.conf /torrents/config/deluge/ltconfig.conf
+fi
+
+if [[ ! $(cat /torrents/config/deluge/core.conf | grep 'ltConfig') || ! $(cat /torrents/config/deluge/core.conf | grep 'YaRSS2') ]]; then
+    sed -i -z -E 's#"enabled_plugins": [^]]*#"enabled_plugins": \[\n    "AutoAdd",\n    "Scheduler",\n    "Label",\n    "Notifications",\n    "ltConfig",\n    "YaRSS2"\n  #g' /torrents/config/deluge/core.conf
 fi
 
 if [ ! -f /torrents/config/deluge/core.conf ]; then
@@ -60,9 +72,13 @@ if [ ! -f /torrents/config/deluge/core.conf ]; then
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/hostlist.conf.1.2
+
+    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
+
+    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
 else
     sed -i 's#"daemon_port": [0-9]*,#"daemon_port": '${DAEMON_PORT}',#g' /torrents/config/deluge/core.conf
-    sed -i -z -E 's#"listen_ports": \[\n(.|\s)*\],#"listen_ports": \[\n    '${FIRST_PORT}',\n    '${LAST_PORT}'\n  ],#g' /torrents/config/deluge/core.conf
+    sed -i -z -E 's#"listen_ports": [^]]*#"listen_ports": \[\n    '${FIRST_PORT}',\n    '${LAST_PORT}'\n  #g' /torrents/config/deluge/core.conf
     sed -i 's#127.0.0.1:[0-9]*#127.0.0.1:'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
     sed -i -z 's#"127.0.0.1",\n\s*[0-9]*,#"127.0.0.1",\n      '${DAEMON_PORT}',#g' /torrents/config/deluge/hostlist.conf.1.2
 fi

@@ -23,6 +23,10 @@ ADD sources/supervisord.conf /etc/supervisord.conf
 ADD scripts/deluge-pass.py /scripts/deluge-pass.py
 ADD scripts/start.sh /scripts/start.sh
 RUN chmod -R +x /scripts
+
+RUN apt autoremove -y
+RUN rm -rf /var/lib/apt/lists/*
+
 # ports
 EXPOSE 80
 
