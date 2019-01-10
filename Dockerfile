@@ -14,7 +14,9 @@ RUN apt update && \
     supervisor \
     libcap2-bin \
     libgeoip-dev \
-    curl
+    locales \
+    curl && \
+    locale-gen en_US.UTF-8
 
 # add local files
 RUN setcap cap_net_bind_service=+ep /usr/bin/python2.7
@@ -23,6 +25,10 @@ ADD sources/supervisord.conf /etc/supervisord.conf
 ADD scripts/deluge-pass.py /scripts/deluge-pass.py
 ADD scripts/start.sh /scripts/start.sh
 RUN chmod -R +x /scripts
+RUN groupmod -g 9999 nogroup
+RUN usermod -g 9999 nobody
+RUN usermod -u 9999 nobody
+RUN usermod -g 9999 sync
 
 RUN apt autoremove -y
 RUN rm -rf /var/lib/apt/lists/*
