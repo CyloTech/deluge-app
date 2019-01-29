@@ -67,15 +67,15 @@ if [ ! -f /torrents/config/deluge/core.conf ]; then
     cp /sources/core.conf /torrents/config/deluge
     cp /sources/web.conf /torrents/config/deluge
     cp /sources/hostlist.conf.1.2 /torrents/config/deluge
+
+    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
+    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
+
     sed -i 's#FIRST_PORT#'${FIRST_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#LAST_PORT#'${LAST_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
     sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/hostlist.conf.1.2
-
-    /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
-
-    cat /torrents/config/deluge/auth | grep "${DELUGE_USERNAME}" || echo "${DELUGE_USERNAME}:${DELUGE_PASSWORD}:10" >> /torrents/config/deluge/auth
 else
     sed -i 's#"daemon_port": [0-9]*,#"daemon_port": '${DAEMON_PORT}',#g' /torrents/config/deluge/core.conf
     sed -i -z -E 's#"listen_ports": [^]]*#"listen_ports": \[\n    '${FIRST_PORT}',\n    '${LAST_PORT}'\n  #g' /torrents/config/deluge/core.conf
@@ -89,7 +89,10 @@ ls -d /torrents/* | grep -v home | xargs -d "\n" chown -R deluge:deluge
 
 if [ ! -f /etc/app_configured ]; then
     touch /etc/app_configured
-    curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST "https://api.cylo.io/v1/apps/installed/$INSTANCE_ID"
+    until [[ $(curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST "https://api.cylo.io/v1/apps/installed/${INSTANCE_ID}" | grep '200') ]]
+        do
+        sleep 5
+    done
 fi
 
 exec /usr/bin/supervisord -n -c /etc/supervisord.conf
