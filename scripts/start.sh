@@ -51,8 +51,8 @@ if [ ! -f /torrents/config/deluge/plugins/YaRSS2-1.4.3-py2.7.egg ]; then
     cp /sources/YaRSS2-1.4.3-py2.7.egg /torrents/config/deluge/plugins/YaRSS2-1.4.3-py2.7.egg
 fi
 
-if [ ! -f /torrents/config/deluge/plugins/ltConfig-0.3.1-py2.7.egg ]; then
-    cp /sources/ltConfig-0.3.1-py2.7.egg /torrents/config/deluge/plugins/ltConfig-0.3.1-py2.7.egg
+if [ ! -f /torrents/config/deluge/plugins/ltConfig-0.3.1-py3.6.egg ]; then
+    cp /sources/ltConfig-0.3.1-py3.6.egg /torrents/config/deluge/plugins/ltConfig-0.3.1-py3.6.egg
 fi
 
 if [ ! -f /torrents/config/deluge/ltconfig.conf ]; then

@@ -1,10 +1,16 @@
 FROM ubuntu
 USER root
 
+LABEL name="deluge"
+LABEL version="2.0.3"
+
 RUN adduser --system --disabled-password --home /home/deluge --shell /sbin/nologin --group --uid 1000 deluge
 
 RUN apt update && \
-    apt install -y \
+    apt install -y software-properties-common && \
+    add-apt-repository ppa:deluge-team/stable
+
+RUN apt install -y \
     deluged \
     deluge-web \
     deluge-console \
@@ -19,7 +25,7 @@ RUN apt update && \
     locale-gen en_US.UTF-8
 
 # add local files
-RUN setcap cap_net_bind_service=+ep /usr/bin/python2.7
+RUN setcap cap_net_bind_service=+ep /usr/bin/python3.6
 ADD sources /sources
 ADD sources/supervisord.conf /etc/supervisord.conf
 ADD scripts/deluge-pass.py /scripts/deluge-pass.py
