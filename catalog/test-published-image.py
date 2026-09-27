@@ -2,8 +2,9 @@
 """Test the existing release image with the proposed catalogue port layout.
 
 Run on the dedicated builder. Creates only uniquely named disposable containers,
-an internal Docker network, a test volume and a callback stub. No production API
-or torrent tracker is contacted. No customer configuration is used.
+a disposable Docker network, a test volume and a callback stub. No production API
+or torrent tracker is contacted; the empty client may query public DHT bootstrap
+nodes. No customer configuration is used.
 """
 import json
 import os
@@ -113,7 +114,9 @@ def main():
         curl = stub / "curl"
         curl.write_text('#!/bin/sh\nprintf "HTTP/1.1 200 OK\\r\\n\\r\\n"\n')
         curl.chmod(0o755)
-        docker("network", "create", "--internal", PREFIX)
+        # An internal Docker network suppresses host port publication. Use a
+        # normal disposable bridge to exercise the same DNAT path as production.
+        docker("network", "create", PREFIX)
         docker("volume", "create", PREFIX)
         try:
             ports = free_ports()

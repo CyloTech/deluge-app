@@ -33,8 +33,8 @@ are preserved.
 1. Run `python3 catalog/test-published-image.py` on the dedicated builder. This
    tests fresh install, restart and recreation with the same test volume, checks
    daemon/torrent TCP reachability, and requires a DHT ping response through the
-   forwarded UDP torrent port. Test containers have an internal network and a
-   stubbed installation callback.
+   forwarded UDP torrent port. Test containers use a disposable bridge, contain
+   no torrents or customer data, and have a stubbed installation callback.
 2. Deliver this exact pushed Git commit to a separate checkout on the API host.
 3. Run the deployed importer against `catalog/appbox.yml` with `--dry-run
    --import-version --app-id=68 --admin-only`. Inspect the result.
