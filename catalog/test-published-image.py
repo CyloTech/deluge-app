@@ -96,14 +96,17 @@ print(json.dumps({k:c[k] for k in ('listen_ports','daemon_port','random_port')})
                     udp.sendto(ping, ("127.0.0.1", ports[1]))
                     reply, _ = udp.recvfrom(4096)
                     assert b'1:t2:ab' in reply and b'1:y1:r' in reply, 'Unexpected UDP response'
+            # Supervisor can still be transitioning processes from STARTING
+            # after their sockets open. Wait for both Deluge processes.
+            status = docker("exec", name, "supervisorctl", "status")
+            states = {line.split()[0]: line.split()[1] for line in status.splitlines() if len(line.split()) > 1}
+            assert states.get("deluged") == "RUNNING", status
+            assert states.get("deluge-web") == "RUNNING", status
             break
         except (AssertionError, OSError, RuntimeError, json.JSONDecodeError):
             if time.monotonic() >= deadline:
                 raise
             time.sleep(1)
-    # Deluged and its Web UI must be supervised as the image's unprivileged user.
-    status = docker("exec", name, "supervisorctl", "status")
-    assert "deluged" in status and "deluge-web" in status and "FATAL" not in status, status
     print(f"PASS {name}: correct config and TCP" + ("/UDP mapping; DHT ping answered" if combined else " mapping"), flush=True)
 
 

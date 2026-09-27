@@ -1,7 +1,8 @@
 # Deluge combined torrent ports
 
-Catalogue release `2.2.0-lt-2.0.10.0-1` reuses the published Deluge 2.2.0 image,
-pinned by digest. It requires no image rebuild. The historical source checkout
+Catalogue release `2.2.0-lt-2.0.10.0-1` reuses the published Deluge 2.2.0 image
+and records its verified digest. Docker continues to use the existing `2.2.0`
+tag. It requires no image rebuild. The historical source checkout
 does not reproduce that image; do not build this catalogue release from its
 Dockerfile.
 
