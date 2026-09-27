@@ -1,0 +1,27 @@
+app:
+  display_name: Deluge
+  publisher: Deluge Team
+  description: Deluge BitTorrent client.
+image:
+  name: repo.cylo.net/deluge
+  version: 2.2.0-lt-2.0.10.0-1
+  tag: 2.2.0
+  digest: repo.cylo.net/deluge@sha256:bd878dd1d131d9ce428519f98ebc3f8a9fd180f86a0cc5718ecac552dbf0747b
+container:
+  memory: 0
+  memory_swap: 0
+  memory_reservation: 0
+  cpus: 0
+  pids_limit: 0
+  init: true
+behavior:
+  app_slots: 1
+  expect_callback: true
+  callback_requires_auth: false
+  can_update: true
+  allow_downgrade: true
+ports:
+  tcp:
+    dynamic: 1
+  combined:
+    dynamic: 2
