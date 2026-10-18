@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.12
 # Changes the password for Deluge's Web UI
 
 from deluge.config import Config

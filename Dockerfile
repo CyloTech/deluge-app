@@ -1,19 +1,18 @@
-FROM ubuntu
-USER root
+FROM ubuntu:noble
 
-LABEL name="deluge"
-LABEL version="2.0.3"
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN adduser --system --disabled-password --home /home/deluge --shell /sbin/nologin --group --uid 1000 deluge
+# Fix for "Tracker status: Invalid Argument" should be removed when fixed upstream
+# this was version libtorrent-rasterbar10_1.2.1+daily10045+33d006d+201911220604~ubuntu18.04.1_amd64.deb
 
-RUN apt update && \
-    apt install -y software-properties-common && \
-    add-apt-repository ppa:deluge-team/stable
+ADD sources /sources
+ADD scripts /scripts
 
-RUN apt install -y \
-    deluged \
-    deluge-web \
-    deluge-console \
+RUN apt update && apt-get install -y adduser && userdel -r ubuntu || true && \
+    adduser --system --disabled-password --home /home/deluge --shell /sbin/nologin --group --uid 1000 deluge && \
+    apt update && apt install -y software-properties-common && \
+    add-apt-repository "deb https://ppa.launchpadcontent.net/deluge-team/stable/ubuntu noble main" && \
+    apt update && apt install -y \
     p7zip \
     unrar \
     unzip \
@@ -21,25 +20,32 @@ RUN apt install -y \
     libcap2-bin \
     libgeoip-dev \
     locales \
-    curl && \
-    locale-gen en_US.UTF-8
+    python3-pip \
+    python3-venv \
+    jq \
+    curl \
+    python3-gi \
+    python3-gi-cairo \
+    deluge*=2.2.0* \
+    python3-urllib3 \
+    nginx \
+    libnginx-mod-http-ndk \
+    libnginx-mod-http-lua
 
-# add local files
-RUN setcap cap_net_bind_service=+ep /usr/bin/python3.6
-ADD sources /sources
-ADD sources/supervisord.conf /etc/supervisord.conf
-ADD scripts/deluge-pass.py /scripts/deluge-pass.py
-ADD scripts/start.sh /scripts/start.sh
-RUN chmod -R +x /scripts
-RUN groupmod -g 9999 nogroup
-RUN usermod -g 9999 nobody
-RUN usermod -u 9999 nobody
-RUN usermod -g 9999 sync
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install deluge-client
 
-RUN apt autoremove -y
-RUN rm -rf /var/lib/apt/lists/*
+# Generate locale, copy supervisord config, set permissions, clean up
+RUN locale-gen en_US.UTF-8 && \
+    cp /sources/supervisord.conf /etc/supervisord.conf && \
+    cp /sources/nginx.conf /etc/nginx/nginx.conf && \
+    chmod -R +x /scripts && \
+    setcap cap_net_bind_service=+ep /usr/bin/python3.12 && \
+    apt clean && \
+    apt autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
-# ports
+# Ports
 EXPOSE 80
 
 CMD [ "/scripts/start.sh" ]

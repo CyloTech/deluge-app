@@ -1,0 +1,197 @@
+#!/opt/venv/bin/python
+"""
+This script interacts directly with the Deluge daemon via the native RPC protocol
+using the deluge-client Python library.
+
+Usage:
+    python3 delugecheck [torrent_hash]
+
+If a torrent hash is provided, the script checks the torrent status and removes it.
+If no argument is provided, the script executes an infinite loop that monitors torrents,
+and for each seeding torrent that appears public (based on its tracker URLs), it pauses it.
+"""
+
+import os
+import sys
+import time
+import random
+import signal
+import re
+from deluge_client import DelugeRPCClient
+
+# Configuration
+LOCK_FILE = "/tmp/script.lock"
+DAEMON_HOST = "127.0.0.1"
+DELUGE_PASSWORD = os.getenv("DELUGE_PASSWORD", "yourpassword")
+DELUGE_USERNAME = os.getenv("DELUGE_USERNAME", "deluge")
+daemon_port = int(os.getenv("DAEMON_PORT", 58846))
+
+# Pre-compile the regex patterns used to identify non-public tracker URLs.
+pattern1 = re.compile(r"(http|https|udp)://[a-z0-9\.-]+\.[a-z]{2,13}((:[0-9]{2,5})|)/.*[0-9a-zA-Z]{8,32}/an.*")
+pattern2 = re.compile(r"(http|https|udp)://[a-z0-9\.-]+\.[a-z]{2,13}((:[0-9]{2,5})|)/.*an.*\?.+=.+")
+
+def decode_bytes(item):
+    """
+    Recursively decode bytes to strings in nested dictionaries, lists, and tuples.
+    """
+    if isinstance(item, bytes):
+        return item.decode('utf-8')
+    elif isinstance(item, list):
+        return [decode_bytes(subitem) for subitem in item]
+    elif isinstance(item, tuple):
+        return tuple(decode_bytes(subitem) for subitem in item)
+    elif isinstance(item, dict):
+        return {decode_bytes(key): decode_bytes(value) for key, value in item.items()}
+    else:
+        return item
+
+def remove_lock_file():
+    if os.path.exists(LOCK_FILE):
+        try:
+            os.remove(LOCK_FILE)
+        except Exception as e:
+            print(f"Error removing lock file: {e}")
+
+def signal_handler(signum, frame):
+    remove_lock_file()
+    sys.exit(0)
+
+def check_lock():
+    if os.path.exists(LOCK_FILE):
+        try:
+            with open(LOCK_FILE, "r") as f:
+                pid_str = f.read().strip()
+                existing_pid = int(pid_str)
+            # Check if the process with existing_pid is running.
+            try:
+                os.kill(existing_pid, 0)
+            except OSError:
+                print("Found stale lock file. Removing.")
+                os.remove(LOCK_FILE)
+                return
+            print(f"Another instance of the script is already running with PID {existing_pid}.")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error reading lock file: {e}")
+            sys.exit(1)
+    # Create a lock file with the current process PID.
+    with open(LOCK_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+def get_client():
+    client = DelugeRPCClient(DAEMON_HOST, daemon_port, DELUGE_USERNAME, DELUGE_PASSWORD)
+    try:
+        client.connect()
+    except Exception as e:
+        print("Could not connect to Deluge daemon:", e)
+        sys.exit(1)
+    return client
+
+def remove_torrent(torrent_hash):
+    client = get_client()
+    try:
+        # Get torrent status and decode it.
+        status = client.call("core.get_torrent_status", torrent_hash, ["state"])
+        status = decode_bytes(status)
+    except Exception as e:
+        print(f"Error fetching torrent status for {torrent_hash}: {e}")
+        sys.exit(1)
+    state = status.get("state")
+    if state is None:
+        print(f"Torrent {torrent_hash} does not exist (state: None).")
+        sys.exit(1)
+    else:
+        print(f"Torrent {torrent_hash} exists, state: {state}")
+        print(f"Removing torrent {torrent_hash}...")
+        try:
+            client.call("core.remove_torrent", torrent_hash, False)
+            print(f"Removed torrent {torrent_hash}.")
+        except Exception as e:
+            print(f"Error removing torrent {torrent_hash}: {e}")
+            sys.exit(1)
+    sys.exit(0)
+
+def main_loop():
+    client = get_client()
+    while True:
+        try:
+            # Use the correct daemon method to get torrent statuses.
+            torrents = client.call("core.get_torrents_status", {}, ["state"])
+            torrents = decode_bytes(torrents)
+        except Exception as e:
+            print("Error fetching torrent list:", e)
+            time.sleep(10)
+            client = get_client()  # Attempt to reconnect
+            continue
+        
+        stopped = set()
+        
+        for torrent_hash, info in torrents.items():
+            print(f"Torrent {torrent_hash} info: {info}")
+            state = info.get("state", "")
+            if state != "Seeding":
+                continue
+
+            try:
+                # Get detailed torrent status, including trackers and the 'private' flag.
+                detail = client.call("core.get_torrent_status", torrent_hash, ["trackers", "private"])
+                detail = decode_bytes(detail)
+            except Exception as e:
+                print(f"Error fetching detailed status for torrent {torrent_hash}: {e}")
+                continue
+
+            # Check the 'private' flag.
+            if detail.get("private") in [True, "true"]:
+                continue
+
+            trackers = detail.get("trackers", [])
+            trackers = decode_bytes(trackers)
+
+            public = True
+            tracker_to_report = None
+            for tracker in trackers:
+                # The tracker dictionaries are now fully decoded.
+                url = tracker.get("url", "")
+                if not url:
+                    print(f"Torrent: {torrent_hash} returned empty tracker URL!")
+                    continue
+
+                if tracker_to_report is None:
+                    tracker_to_report = url
+
+                if pattern1.search(url) or pattern2.search(url):
+                    public = False
+                    break
+
+            if public and torrent_hash not in stopped:
+                try:
+                    client.call("core.pause_torrent", [torrent_hash])
+                    stopped.add(torrent_hash)
+                    print(f"Stopping: {torrent_hash}, tracker: {tracker_to_report}")
+                except Exception as e:
+                    print(f"Error pausing torrent {torrent_hash}: {e}")
+                    continue
+
+        sleep_duration = random.randint(60, 120)
+        print(f"Sleeping for {sleep_duration} seconds")
+        time.sleep(sleep_duration)
+
+if __name__ == "__main__":
+    # Ensure the lock file is removed on exit via signal handlers.
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # If a torrent hash is provided as an argument, run removal mode.
+    if len(sys.argv) == 2:
+        torrent_hash = sys.argv[1]
+        remove_torrent(torrent_hash)
+    elif len(sys.argv) > 2:
+        print("Usage: {} [torrent_hash]".format(sys.argv[0]))
+        sys.exit(1)
+    else:
+        # No argument provided – run as a daemon that monitors torrents.
+        check_lock()
+        try:
+            main_loop()
+        finally:
+            remove_lock_file()
