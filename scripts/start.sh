@@ -25,7 +25,7 @@ EOF
     
 cat << EOF > /etc/supervisor/conf.d/deluge-web.conf
 [program:deluge-web]
-command=/bin/su -s /bin/bash -c "TERM=xterm /usr/bin/deluge-web -d -c /torrents/config/deluge/ --loglevel=info" deluge
+command=/bin/su -s /bin/bash -c "ulimit -Sn 65535 && TERM=xterm /usr/bin/deluge-web -d -c /torrents/config/deluge/ --loglevel=info" deluge
 autostart=true
 autorestart=true
 priority=2
