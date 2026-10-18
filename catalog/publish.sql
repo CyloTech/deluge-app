@@ -9,30 +9,31 @@ DECLARE
     candidate app_versions%ROWTYPE;
     application apps%ROWTYPE;
     changed integer;
-    release_notes text := 'Adds UDP forwarding to the torrent ports for incoming uTP peers and DHT. Update Deluge from Appbox to apply the new port mappings. Assigned torrent port numbers may change; Deluge is configured automatically.';
+    release_notes text := 'Fixes "Too many open files" errors in the Deluge Web UI under heavy load. The Web UI now has the same open-files limit as the Deluge daemon. Update Deluge from Appbox to apply the fix.';
 BEGIN
     SELECT * INTO STRICT application FROM apps WHERE id = 68 FOR UPDATE;
     SELECT * INTO STRICT baseline FROM app_versions
-      WHERE id = 71 AND app_id = 68 AND version = '2.2.0-lt-2.0.10.0' FOR UPDATE;
+      WHERE id = 1336 AND app_id = 68 AND version = '2.2.0-lt-2.0.10.0-1' FOR UPDATE;
     SELECT * INTO STRICT candidate FROM app_versions
-      WHERE app_id = 68 AND version = '2.2.0-lt-2.0.10.0-1' FOR UPDATE;
+      WHERE app_id = 68 AND version = '2.2.0-lt-2.0.10.0-2' FOR UPDATE;
 
     IF application.display_name <> 'Deluge'
        OR application.version <> baseline.version
        OR application.tag <> '2.2.0'
        OR application."Image" <> 'deluge'
-       OR application."TCPDynamicPorts" IS DISTINCT FROM 3
-       OR COALESCE(application."CombinedDynamicPorts", 0) <> 0
+       OR application."TCPDynamicPorts" IS DISTINCT FROM 1
+       OR application."CombinedDynamicPorts" IS DISTINCT FROM 2
        OR baseline.is_default IS DISTINCT FROM 1
-       OR baseline.tcp_dynamic_ports IS DISTINCT FROM 3
-       OR COALESCE(baseline.combined_dynamic_ports, 0) <> 0
+       OR baseline.tag <> '2.2.0'
+       OR baseline.tcp_dynamic_ports IS DISTINCT FROM 1
+       OR baseline.combined_dynamic_ports IS DISTINCT FROM 2
        OR candidate.is_default IS DISTINCT FROM 0
        OR candidate.admin_only IS DISTINCT FROM 1
        OR candidate.enabled IS DISTINCT FROM 1
-       OR candidate.tag <> '2.2.0'
+       OR candidate.tag <> '2.2.0-lt-2.0.10.0-2'
        OR candidate.image <> 'deluge'
        OR candidate.installed_image_digest IS DISTINCT FROM
-          'repo.cylo.net/deluge@sha256:bd878dd1d131d9ce428519f98ebc3f8a9fd180f86a0cc5718ecac552dbf0747b'
+          'repo.cylo.net/deluge@sha256:3599a7b253355610cc97f8e033bc39b164e0ef638633205c4483ad9b0526273a'
        OR candidate.tcp_dynamic_ports IS DISTINCT FROM 1
        OR candidate.combined_dynamic_ports IS DISTINCT FROM 2
        OR candidate.tcp_port_range IS NOT NULL
@@ -82,9 +83,9 @@ BEGIN
     GET DIAGNOSTICS changed = ROW_COUNT;
     IF changed <> 1 THEN RAISE EXCEPTION 'Expected one Deluge candidate'; END IF;
 
-    UPDATE apps SET version=candidate.version, "TCPDynamicPorts"=1,
-      "CombinedDynamicPorts"=2, updated_at=CURRENT_TIMESTAMP::text
-      WHERE id=68 AND version=baseline.version;
+    UPDATE apps SET version=candidate.version, tag=candidate.tag,
+      updated_at=CURRENT_TIMESTAMP::text
+      WHERE id=68 AND version=baseline.version AND tag='2.2.0';
     GET DIAGNOSTICS changed = ROW_COUNT;
     IF changed <> 1 THEN RAISE EXCEPTION 'Expected one Deluge app'; END IF;
 

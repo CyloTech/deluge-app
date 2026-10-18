@@ -1,12 +1,27 @@
-# Deluge combined torrent ports
+# Deluge catalogue releases
+
+## 2.2.0-lt-2.0.10.0-2: deluge-web open-files limit
+
+Built from this repository (image tag `2.2.0-lt-2.0.10.0-2`). `deluge-web` now
+starts with `ulimit -Sn 65535`, as `deluged` already did. Before this release it
+inherited a soft limit of 1024 from `su` and failed with `Errno 24` under load.
+Ports, environment templates and resource settings are unchanged from
+`2.2.0-lt-2.0.10.0-1`.
+
+Build on the dedicated builder from the exact pushed commit, then run
+`catalog/release-gate.py <image-ref>` before `docker push`. The gate checks the
+registry precondition, package versions, ports, Web UI and both processes'
+limits on fresh install, restart and update from the previous image. Then
+follow steps 2 to 6 below with this `appbox.yml` and `publish.sql`.
+
+## 2.2.0-lt-2.0.10.0-1: combined torrent ports
 
 Catalogue release `2.2.0-lt-2.0.10.0-1` reuses the published Deluge 2.2.0 image
 and records its verified digest. Docker continues to use the existing `2.2.0`
-tag. It requires no image rebuild. The historical source checkout
-does not reproduce that image; do not build this catalogue release from its
-Dockerfile.
+tag. The source of that image is now committed (`scripts/`, `sources/` and the
+`Dockerfile`).
 
-## Port mapping
+### Port mapping
 
 | Index | Existing environment variable | Previous protocol | New protocol |
 | --- | --- | --- | --- |
@@ -29,7 +44,7 @@ and container port numbers. The daemon remains TCP only. Existing app slots,
 resource limits, mounts, installation fields and older version port definitions
 are preserved.
 
-## Validation and publication
+### Validation and publication
 
 1. Run `python3 catalog/test-published-image.py` on the dedicated builder. This
    tests fresh install, restart and recreation with the same test volume, checks
