@@ -1,5 +1,18 @@
 # Deluge catalogue releases
 
+## 2.2.0-lt-2.0.10.0-3: keep preferences on update
+
+Built from this repository (image tag `2.2.0-lt-2.0.10.0-3`). When a container
+starts on existing data, `start.sh` now keeps `core.conf` and `ltconfig.conf`
+and only rewrites `daemon_port` and `listen_ports`, as a restart already did.
+Earlier images replaced both files with the templates, so every version update
+reset the customer's Deluge and ltConfig preferences (`core.conf.backup` held
+the previous `core.conf`; `ltconfig.conf` had no backup). Ports, environment
+templates and resource settings are unchanged from `2.2.0-lt-2.0.10.0-2`.
+
+The release gate now edits preferences on data written by the previous image
+and checks they survive the update and a restart.
+
 ## 2.2.0-lt-2.0.10.0-2: deluge-web open-files limit
 
 Built from this repository (image tag `2.2.0-lt-2.0.10.0-2`). `deluge-web` now

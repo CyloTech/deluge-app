@@ -4,9 +4,9 @@ app:
   description: Deluge BitTorrent client.
 image:
   name: repo.cylo.net/deluge
-  version: 2.2.0-lt-2.0.10.0-2
-  tag: 2.2.0-lt-2.0.10.0-2
-  digest: repo.cylo.net/deluge@sha256:3599a7b253355610cc97f8e033bc39b164e0ef638633205c4483ad9b0526273a
+  version: 2.2.0-lt-2.0.10.0-3
+  tag: 2.2.0-lt-2.0.10.0-3
+  digest: repo.cylo.net/deluge@sha256:33b1fb5c4d511645db551bdf6486033b9eca6839b70c021d01f52132631a158c
 container:
   memory: 0
   memory_swap: 0
