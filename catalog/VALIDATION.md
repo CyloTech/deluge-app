@@ -1,5 +1,38 @@
 # Publication records
 
+## 2.2.0-lt-2.0.10.0-3
+
+- Catalogue app: `68` (Deluge).
+- Previous default: version row `1417`, `2.2.0-lt-2.0.10.0-2`.
+- New default: version row `1424`, `2.2.0-lt-2.0.10.0-3`.
+- Image source commit: `5f54109e28ab1ad90599b541c606aabb9222c668`.
+- Catalogue commit applied: `1790d3441c86b28cd6a99cbc9ba859809f779137`.
+- Image: `repo.cylo.net/deluge:2.2.0-lt-2.0.10.0-3`, index
+  `sha256:1633d610348af20b55c1ac497aa4221c82102412e9d1dd74d8d44eb76b088a03`,
+  amd64 manifest `sha256:33b1fb5c4d511645db551bdf6486033b9eca6839b70c021d01f52132631a158c`.
+
+### Passed checks
+
+`catalog/release-gate.py` on the dedicated builder, before push: package
+versions; fresh install and restart; update from the `-2` image on the same test
+volume after setting non-template Deluge and ltConfig preferences, with the
+preferences, test data, ports, Web UI and 65535 open-files limits checked after
+the update and after a further restart; registry precondition.
+
+The first gate run (from `b3adb13`) failed before push: its preference set
+disabled DHT, which correctly stopped Deluge answering the gate's DHT ping.
+`5f54109` uses a different preference; nothing from the failed run was pushed.
+
+### Catalogue readback
+
+The deployed importer (as `nginx`) passed a dry run and created admin-only
+candidate `1424`. App row, other versions, environment templates and custom
+fields were unchanged by the import. `publish.sql` then saved the release notes,
+made `1424` public and default, and set the app-level version and tag. Readback
+confirmed one default version, exact notes, resource parity with `1417`, and
+unchanged hashes for older versions (excluding default/timestamp), environment
+templates and custom fields. No customer instance was updated.
+
 ## 2.2.0-lt-2.0.10.0-2
 
 - Catalogue app: `68` (Deluge).
