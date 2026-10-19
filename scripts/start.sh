@@ -121,13 +121,15 @@ if [ ! -f /etc/app_configured ]; then
             cp /sources/autoadd.conf /torrents/config/deluge/autoadd.conf
         fi
     else
+        # Recreated container with existing data (update): keep the customer's
+        # preferences and only point Deluge at the ports assigned to this container.
         cp /sources/web.conf /torrents/config/deluge
         cp /torrents/config/deluge/core.conf /torrents/config/deluge/core.conf.backup
-        cp /sources/core.conf /torrents/config/deluge
-        cp /sources/ltconfig.conf /torrents/config/deluge/ltconfig.conf
-        sed -i 's#FIRST_PORT#'${FIRST_PORT}'#g' /torrents/config/deluge/core.conf
-        sed -i 's#LAST_PORT#'${FIRST_PORT}'#g' /torrents/config/deluge/core.conf
-        sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/core.conf
+        if [ ! -f /torrents/config/deluge/ltconfig.conf ]; then
+            cp /sources/ltconfig.conf /torrents/config/deluge/ltconfig.conf
+        fi
+        sed -i 's#"daemon_port": [0-9]*,#"daemon_port": '${DAEMON_PORT}',#g' /torrents/config/deluge/core.conf
+        sed -i -z -E 's#"listen_ports": [^]]*#"listen_ports": \[\n    '${FIRST_PORT}',\n    '${FIRST_PORT}'\n  #g' /torrents/config/deluge/core.conf
         sed -i 's#DAEMON_PORT#'${DAEMON_PORT}'#g' /torrents/config/deluge/web.conf
         /scripts/deluge-pass.py /torrents/config/deluge ${DELUGE_PASSWORD}
         cp /sources/hostlist.conf.1.2 /torrents/config/deluge

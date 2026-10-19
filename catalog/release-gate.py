@@ -14,8 +14,9 @@ authenticated registry reports that the tag does not exist yet.
    reachable, DHT ping answered through the UDP torrent port, Web UI answers,
    deluged and deluge-web both run with a 65535 open-files soft limit.
 4. Restart of the same container: same checks.
-5. Update from the previous published image on the same volume: test data kept,
-   same checks after recreation and after a further restart.
+5. Update from the previous published image on the same volume: test data and
+   the customer's Deluge and ltConfig preferences kept, same checks after
+   recreation and after a further restart.
 
 Test containers use a disposable bridge, a test volume and a stubbed install
 callback. No customer data, production API or tracker is used.
@@ -30,8 +31,13 @@ import tempfile
 import time
 import uuid
 
-PREVIOUS_IMAGE = "repo.cylo.net/deluge@sha256:bd878dd1d131d9ce428519f98ebc3f8a9fd180f86a0cc5718ecac552dbf0747b"
-PREVIOUS_TAG = "repo.cylo.net/deluge:2.2.0"
+PREVIOUS_IMAGE = "repo.cylo.net/deluge@sha256:3599a7b253355610cc97f8e033bc39b164e0ef638633205c4483ad9b0526273a"
+PREVIOUS_TAG = "repo.cylo.net/deluge:2.2.0-lt-2.0.10.0-2"
+# Customer preferences that differ from the image templates; an update must keep them.
+CORE_PREFS = {"max_active_downloading": 4, "max_connections_global": 300,
+              "max_connections_per_torrent": 60, "dht": False,
+              "move_completed": False, "stop_seed_ratio": 0.5}
+LTCONFIG_PREFS = {"connections_limit": 1234}
 NOFILE = 65535
 PREFIX = "deluge-release-gate-" + uuid.uuid4().hex[:12]
 containers = []
@@ -132,6 +138,41 @@ for pid in [{int(status)}] + descendants({int(status)}):
     return int(docker("exec", name, "python3", "-c", code))
 
 
+CONF_CODE = """
+import json, pathlib, sys
+def load(p):
+    s = p.read_text(); d = json.JSONDecoder(); h, n = d.raw_decode(s); return h, d.decode(s[n:].lstrip())
+def save(p, h, c):
+    p.write_text(json.dumps(h, indent=4) + json.dumps(c, indent=4, sort_keys=True))
+base = pathlib.Path('/torrents/config/deluge')
+core, lt = base / 'core.conf', base / 'ltconfig.conf'
+if sys.argv[1] == 'set':
+    prefs = json.loads(sys.argv[2])
+    h, c = load(core); c.update(prefs['core']); save(core, h, c)
+    h, c = load(lt); c['settings'].update(prefs['ltconfig']); save(lt, h, c)
+else:
+    c = load(core)[1]; l = load(lt)[1]['settings']
+    print(json.dumps({'core': {k: c.get(k) for k in json.loads(sys.argv[2])['core']},
+                      'ltconfig': {k: l.get(k) for k in json.loads(sys.argv[2])['ltconfig']}}))
+"""
+
+
+def prefs_arg():
+    return json.dumps({"core": CORE_PREFS, "ltconfig": LTCONFIG_PREFS})
+
+
+def set_prefs(image):
+    # Edit the stopped volume, as a customer would have done through Deluge.
+    docker("run", "--rm", "--platform", "linux/amd64", "--entrypoint", "python3",
+           "--mount", f"type=volume,src={PREFIX},dst=/torrents",
+           image, "-c", CONF_CODE, "set", prefs_arg())
+
+
+def check_prefs(name):
+    found = json.loads(docker("exec", name, "python3", "-c", CONF_CODE, "get", prefs_arg()))
+    assert found == {"core": CORE_PREFS, "ltconfig": LTCONFIG_PREFS}, found
+
+
 def verify(name, ports, expect_nofile=True):
     # Deluge config files contain a format header followed by the config object.
     config_code = """
@@ -210,14 +251,17 @@ def main():
             docker("stop", old)
             docker("rm", old)
             containers.remove(old)
+            set_prefs(image)
 
             updated = PREFIX + "-updated"
             start(updated, image, ports, str(stub))
             verify(updated, ports)
             assert docker("exec", updated, "cat", "/torrents/release-gate-marker") == "preserved"
+            check_prefs(updated)
             docker("restart", updated)
             verify(updated, ports)
-            print("PASS update from previous image kept data and raised limits", flush=True)
+            check_prefs(updated)
+            print("PASS update from previous image kept data and preferences, raised limits", flush=True)
         finally:
             for name in containers:
                 docker("rm", "-f", name, check=False)
