@@ -34,8 +34,9 @@ import uuid
 PREVIOUS_IMAGE = "repo.cylo.net/deluge@sha256:3599a7b253355610cc97f8e033bc39b164e0ef638633205c4483ad9b0526273a"
 PREVIOUS_TAG = "repo.cylo.net/deluge:2.2.0-lt-2.0.10.0-2"
 # Customer preferences that differ from the image templates; an update must keep them.
+# DHT stays on: verify() needs a DHT reply through the UDP torrent port.
 CORE_PREFS = {"max_active_downloading": 4, "max_connections_global": 300,
-              "max_connections_per_torrent": 60, "dht": False,
+              "max_connections_per_torrent": 60, "max_upload_slots_global": 150,
               "move_completed": False, "stop_seed_ratio": 0.5}
 LTCONFIG_PREFS = {"connections_limit": 1234}
 NOFILE = 65535
